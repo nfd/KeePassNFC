@@ -176,14 +176,6 @@ public class PrepareNewTagActivity extends Activity {
 		});
 	}
 
-	// Stuff came back from file chooser
-
-	private File uriToFilename(Uri uri) {
-		String filename = HideousUriToFileHack.getPath(getApplicationContext(), uri);
-
-		return new File(filename);
-	}
-
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 	    switch (requestCode) {

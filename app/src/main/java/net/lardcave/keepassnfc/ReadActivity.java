@@ -28,6 +28,8 @@
 package net.lardcave.keepassnfc;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.nfc.NdefMessage;
@@ -86,10 +88,22 @@ public class ReadActivity extends Activity {
 		Intent intent = new Intent();
 		
 		intent.setComponent(new ComponentName("com.android.keepass", "com.keepassdroid.PasswordActivity"));
-		intent.putExtra("fileName", dbinfo.database.toString());
-		intent.putExtra("keyFile", dbinfo.keyfile == null? null: dbinfo.keyfile.toString());
+		intent.setAction(Intent.ACTION_VIEW);
+
+		intent.setData(dbinfo.database);
+		intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+		if(dbinfo.keyfile != null) {
+			// Use ClipData in order to pass permissions for multiple content:// URIs.
+			// See https://developer.android.com/reference/android/content/Intent.html#setClipData%28android.content.ClipData%29
+			ClipData.Item item = new ClipData.Item(dbinfo.keyfile);
+			ClipData clipData = new ClipData("keyFile", new String[] {ClipDescription.MIMETYPE_TEXT_URILIST}, item);
+			intent.setClipData(clipData);
+		}
+
 		intent.putExtra("password", dbinfo.password);
 		intent.putExtra("launchImmediately", dbinfo.config != Settings.CONFIG_PASSWORD_ASK);
+
 		startActivity(intent);
 		return true;
 	}

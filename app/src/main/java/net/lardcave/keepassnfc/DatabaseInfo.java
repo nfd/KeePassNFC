@@ -39,6 +39,7 @@ import java.nio.ByteOrder;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.util.Log;
 import android.content.Context;
@@ -162,7 +163,22 @@ public class DatabaseInfo {
 		ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
 		return shorts[0];
 	}
-	
+
+	// Persist access to the file.
+	protected void persistAccessToFile(Context ctx, Uri uri) {
+		// https://developer.android.com/guide/topics/providers/document-provider.html#permissions
+		// via http://stackoverflow.com/a/21640230
+		ctx.getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+	}
+
+	public void retainOrUpdateUriAccess(Context ctx) {
+		if(database != null)
+			persistAccessToFile(ctx, database);
+
+		if(keyfile != null)
+			persistAccessToFile(ctx, keyfile);
+	}
+
 	public boolean serialise(Context ctx, byte[] key) throws CryptoFailedException
 	{
 		/* Encrypt the data and store it on the Android device.
@@ -171,6 +187,8 @@ public class DatabaseInfo {
 		*/
 		byte encrypted_config;
 		byte[] encrypted_password = encrypt_password(key);
+
+		retainOrUpdateUriAccess(ctx);
 
 		FileOutputStream nfcinfo;
 		try {
@@ -215,7 +233,7 @@ public class DatabaseInfo {
 		byte[] encrypted_password = new byte[Settings.max_password_length];
 		
 		FileInputStream nfcinfo;
-		
+
 		try {
 			nfcinfo = ctx.openFileInput(Settings.nfcinfo_filename_template + "_00.txt");
 		} catch (FileNotFoundException e) {
@@ -234,11 +252,13 @@ public class DatabaseInfo {
 		}
 
 		Uri database = Uri.parse(databaseString);
-		Uri keyfile = keyfileString == ""? null: Uri.parse(keyfileString);
+		Uri keyfile = keyfileString.equals("") ? null: Uri.parse(keyfileString);
 		
 		password = decrypt_password(encrypted_password, key);
-				
-		return new DatabaseInfo(database, keyfile, password, config);
+
+		DatabaseInfo dbInfo = new DatabaseInfo(database, keyfile, password, config);
+		dbInfo.retainOrUpdateUriAccess(ctx);
+		return dbInfo;
 	}
 	
 	private static int read_bytes(FileInputStream fis, byte[] buffer) throws IOException
