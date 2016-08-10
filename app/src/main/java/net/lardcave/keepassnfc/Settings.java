@@ -28,13 +28,16 @@
 package net.lardcave.keepassnfc;
 
 public class Settings {
-	public static final String nfc_mime_type = "application/x-keepassnfc-2";
+	public static final String nfc_mime_type = "application/x-keepassnfc-3";
 	public static final String nfcinfo_filename_template = "nfcinfo";
 
-	// Only a single byte is used for the password length.
-	public static final int max_password_length = 255;
+	// Only a single byte is used for the password length & it must be a multiple of 16
+	public static final int max_password_length = 15 * 16;
 
 	// Stored on the tag:
+	public static final int KEY_TYPE_RAW = 1; // Password is stored directly on the card (basic NTAG203 memory-only tag)
+	public static final int KEY_TYPE_APP = 2; // Password is stored in the KeepassNFC applet (JavaCard smartcard).
+	public static final int key_type_length = 1;
 	public static final int key_length = 16; // AES
 
 	// Stored elsewhere:

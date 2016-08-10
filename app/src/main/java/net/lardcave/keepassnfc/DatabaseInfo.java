@@ -50,9 +50,11 @@ public class DatabaseInfo {
 	public Uri database;
 	public Uri keyfile;
 	public String password;
+	public byte[] encrypted_password;
+
 	public int config;
 
-	private static final String CIPHER = "AES/CTR/NoPadding";
+	private static final String CIPHER = "AES/CBC/NoPadding";
     private static final String LOG_TAG = "keepassnfc";
 	
 	public DatabaseInfo(Uri database, Uri keyfile, String password, int config)
@@ -60,9 +62,19 @@ public class DatabaseInfo {
 		this.database = database;
 		this.keyfile = keyfile;
 		this.password = password;
+		this.encrypted_password = new byte[Settings.max_password_length];
 		this.config = config;
 	}
-	
+
+	public DatabaseInfo(Uri database, Uri keyfile, byte[] encrypted_password, int config)
+	{
+		this.database = database;
+		this.keyfile = keyfile;
+		this.password = null;
+		this.encrypted_password = encrypted_password;
+		this.config = config;
+	}
+
 	private static Cipher get_cipher(byte[] key, int mode) throws CryptoFailedException
 	{
 		try {
@@ -94,23 +106,22 @@ public class DatabaseInfo {
 	{
 		int i;
 		int idx = 0;
-		byte[] padded_password = new byte[Settings.max_password_length];
 		byte[] plaintext_password = password.getBytes();
 		SecureRandom rng = new SecureRandom();		
 		
 		// Password length...
-		padded_password[idx ++] = (byte)password.length();
+		encrypted_password[idx ++] = (byte)password.length();
 		// ... and password itself...
-		for (i = 0; i < plaintext_password.length; i++) 
-			padded_password[idx ++] = plaintext_password[i];
+		for (i = 0; i < plaintext_password.length; i++)
+			encrypted_password[idx ++] = plaintext_password[i];
 		// ... and random bytes to pad.
-		while (idx < padded_password.length)
-			padded_password[idx++] = (byte)rng.nextInt();
+		while (idx < encrypted_password.length)
+			encrypted_password[idx++] = (byte)rng.nextInt();
 		
 		// Encrypt everything
 		Cipher cipher = get_cipher(key, Cipher.ENCRYPT_MODE);
 		try {
-			return cipher.doFinal(padded_password);
+			return cipher.doFinal(encrypted_password);
 		} catch (javax.crypto.IllegalBlockSizeException e) {
 			Log.d(LOG_TAG, "IllegalBlockSize");
 			throw new CryptoFailedException();
@@ -119,14 +130,20 @@ public class DatabaseInfo {
 			throw new CryptoFailedException();
 		}
 	}
+
+	public String set_decrypted_password(byte[] decrypted_bytes) {
+		int length = (int)decrypted_bytes[0];
+		password = new String(decrypted_bytes, 1, length);
+		return password;
+	}
 	
-	private static String decrypt_password(byte[] crypted_password, byte[] key) throws CryptoFailedException
+	public String decrypt_password(byte[] key) throws CryptoFailedException
 	{
 		byte[] decrypted;
 		Cipher cipher = get_cipher(key, Cipher.DECRYPT_MODE);
 
 		try {
-			decrypted = cipher.doFinal(crypted_password);
+			decrypted = cipher.doFinal(encrypted_password);
 		} catch (javax.crypto.IllegalBlockSizeException e) {
 			Log.d(LOG_TAG, "IllegalBlockSize");
 			throw new CryptoFailedException();
@@ -135,8 +152,7 @@ public class DatabaseInfo {
 			throw new CryptoFailedException();
 		}
 
-		int length = (int)decrypted[0];
-		return new String(decrypted, 1, length);
+		return set_decrypted_password(decrypted);
 	}
 	
 	private byte[] to_short(short i)
@@ -154,16 +170,6 @@ public class DatabaseInfo {
 		return to_short((short)i);
 	}
 	
-	private static short read_short(FileInputStream fis) throws IOException
-	{
-		byte[] bytes = new byte[2];
-		short[] shorts = new short[1];
-		fis.read(bytes, 0, 2);
-
-		ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
-		return shorts[0];
-	}
-
 	// Persist access to the file.
 	protected void persistAccessToFile(Context ctx, Uri uri) {
 		// https://developer.android.com/guide/topics/providers/document-provider.html#permissions
@@ -181,18 +187,18 @@ public class DatabaseInfo {
 
 	public boolean serialise(Context ctx, byte[] key) throws CryptoFailedException
 	{
-		/* Encrypt the data and store it on the Android device.
+		/* Encrypt the configuration (database, password, key location) and store it on the Android device.
 		 *
 		 * The encryption key is stored on the NFC tag.
 		*/
 		byte encrypted_config;
-		byte[] encrypted_password = encrypt_password(key);
+		encrypted_password = encrypt_password(key);
 
 		retainOrUpdateUriAccess(ctx);
 
-		FileOutputStream nfcinfo;
+		FileOutputStream configuration;
 		try {
-			nfcinfo = ctx.openFileOutput(Settings.nfcinfo_filename_template + "_00.txt", Context.MODE_PRIVATE);
+			configuration = ctx.openFileOutput(Settings.nfcinfo_filename_template + "_00.txt", Context.MODE_PRIVATE);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			return false;
@@ -200,23 +206,23 @@ public class DatabaseInfo {
 		try {
 			String uriString;
 
-			nfcinfo.write(config);
+			configuration.write(config);
 
 			uriString = database.toString();
-			nfcinfo.write(to_short(uriString.length()));
-			nfcinfo.write(uriString.getBytes());
+			configuration.write(to_short(uriString.length()));
+			configuration.write(uriString.getBytes());
 
 			if (keyfile == null) {
-				nfcinfo.write(to_short(0));
+				configuration.write(to_short(0));
 			} else {
 				uriString = keyfile.toString();
-				nfcinfo.write(to_short(uriString.length()));
-				nfcinfo.write(uriString.getBytes());
+				configuration.write(to_short(uriString.length()));
+				configuration.write(uriString.getBytes());
 			}
 
-			nfcinfo.write(to_short(encrypted_password.length));
-			nfcinfo.write(encrypted_password);
-			nfcinfo.close();
+			configuration.write(to_short(encrypted_password.length));
+			configuration.write(encrypted_password);
+			configuration.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
@@ -225,13 +231,13 @@ public class DatabaseInfo {
 		return true;
 	}
 	
-	public static DatabaseInfo deserialise(Context ctx, byte[] key) throws CryptoFailedException
+	public static DatabaseInfo deserialise(Context ctx)
 	{
 		int config = Settings.CONFIG_NOTHING;
 		String databaseString, keyfileString, password;
 		byte[] buffer = new byte[1024];
 		byte[] encrypted_password = new byte[Settings.max_password_length];
-		
+
 		FileInputStream nfcinfo;
 
 		try {
@@ -254,13 +260,21 @@ public class DatabaseInfo {
 		Uri database = Uri.parse(databaseString);
 		Uri keyfile = keyfileString.equals("") ? null: Uri.parse(keyfileString);
 		
-		password = decrypt_password(encrypted_password, key);
-
-		DatabaseInfo dbInfo = new DatabaseInfo(database, keyfile, password, config);
+		DatabaseInfo dbInfo = new DatabaseInfo(database, keyfile, encrypted_password, config);
 		dbInfo.retainOrUpdateUriAccess(ctx);
 		return dbInfo;
 	}
-	
+
+	private static short read_short(FileInputStream fis) throws IOException
+	{
+		byte[] bytes = new byte[2];
+		short[] shorts = new short[1];
+		fis.read(bytes, 0, 2);
+
+		ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
+		return shorts[0];
+	}
+
 	private static int read_bytes(FileInputStream fis, byte[] buffer) throws IOException
 	{
 		int length = read_short(fis);

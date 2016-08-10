@@ -37,15 +37,23 @@ import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.util.Log;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.util.Arrays;
+
 public class ReadActivity extends Activity {
+	private static final String TAG = "KPNFC Read";
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
 		
 		byte[] payload = null;
+
+		Log.d(TAG, "Read activity start");
 		
 		Intent intent = getIntent();
 		if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
@@ -65,24 +73,52 @@ public class ReadActivity extends Activity {
 	            }
 	        }
 		}
-		
-		if (payload != null) {
-			load_from_nfc(payload);
+
+		if (payload != null && payload.length > 0) {
+			DatabaseInfo dbinfo = DatabaseInfo.deserialise(this);
+
+			if(dbinfo == null) {
+				Toast.makeText(this, "No KPNFC database set up.", Toast.LENGTH_SHORT).show();
+				return;
+			}
+
+			switch(payload[0]) {
+				case Settings.KEY_TYPE_RAW: {
+
+					byte[] decryption_key = Arrays.copyOfRange(payload, 1, payload.length);
+					try {
+						dbinfo.decrypt_password(decryption_key);
+					} catch (CryptoFailedException e) {
+						Toast.makeText(this, "Couldn't decrypt data. Re-do key?", Toast.LENGTH_SHORT).show();
+						dbinfo = null;
+					}
+					break;
+				}
+				case Settings.KEY_TYPE_APP: {
+
+					KPNFCApplet applet = new KPNFCApplet();
+					byte[] decrypted_bytes = null;
+					try {
+						decrypted_bytes = applet.decrypt(intent, dbinfo.encrypted_password);
+					} catch (IOException e) {
+						Toast.makeText(this, "Card communication failed.", Toast.LENGTH_SHORT).show();
+						dbinfo = null;
+					}
+
+					if(decrypted_bytes != null) {
+						dbinfo.set_decrypted_password(decrypted_bytes);
+					}
+				}
+			}
+
+			if(dbinfo != null) {
+				startKeepassActivity(dbinfo);
+			}
+
+			finish();
 		}
 	}
-	
-	private boolean load_from_nfc(byte[] payload)
-	{
-		try {
-			DatabaseInfo dbinfo = DatabaseInfo.deserialise(this, payload);
-			
-			return startKeepassActivity(dbinfo);
-		} catch (CryptoFailedException e) {
-			Toast.makeText(this, "Couldn't decrypt data. Re-do key?", Toast.LENGTH_SHORT).show();
-			return false;
-		}
-	}
-	
+
 	private boolean startKeepassActivity(DatabaseInfo dbinfo)
 	{
 		Intent intent = new Intent();

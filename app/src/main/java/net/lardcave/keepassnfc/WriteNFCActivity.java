@@ -33,22 +33,32 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.nfc.FormatException;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.nfc.tech.IsoDep;
 import android.nfc.tech.Ndef;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
-/**
- * Created by wzdd on 06/07/2013.
- */
 public class WriteNFCActivity extends Activity {
     private static final String LOG_TAG = "WriteNFCActivity";
 
+	private byte[] randomBytes; // Key
+
     protected void onCreate(Bundle sis) {
         super.onCreate(sis);
-        setContentView(R.layout.activity_write_nfc);
+
+		randomBytes = getIntent().getExtras().getByteArray("randomBytes");
+
+		if(randomBytes.length != Settings.key_length) {
+			throw new RuntimeException("Unexpected key length " + randomBytes.length);
+		}
+
+		setContentView(R.layout.activity_write_nfc);
 
         setResult(0);
 
@@ -61,6 +71,28 @@ public class WriteNFCActivity extends Activity {
             }
         });
     }
+
+	private static NdefMessage createNdefMessage(int key_type, byte[] secretKey)
+	{
+		byte[] messageBytes;
+
+		switch(key_type) {
+			case Settings.KEY_TYPE_RAW:
+				messageBytes = new byte[Settings.key_type_length + Settings.key_length];
+				messageBytes[0] = (byte)Settings.KEY_TYPE_RAW;
+				System.arraycopy(secretKey, 0, messageBytes, 1, Settings.key_length);
+				break;
+			case Settings.KEY_TYPE_APP:
+				messageBytes = new byte[Settings.key_type_length];
+				messageBytes[0] = (byte)Settings.KEY_TYPE_APP;
+				break;
+			default:
+				throw new RuntimeException("Unexpected key type");
+		}
+		// Create the NFC version of this data
+		NdefRecord ndef_records = NdefRecord.createMime(Settings.nfc_mime_type, messageBytes);
+		return new NdefMessage(ndef_records);
+	}
 
     private void nfc_enable()
     {
@@ -97,28 +129,58 @@ public class WriteNFCActivity extends Activity {
     public void onNewIntent(Intent intent)
     {
         String action = intent.getAction();
+		Log.d(LOG_TAG, "Got intent " + intent);
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
-                || NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)) {
-            int success = 0;
-            Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+				|| NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)) {
 
-            // Write the payload to the tag.
-            Ndef ndef = Ndef.get(tag);
-            try {
-                ndef.connect();
-                ndef.writeNdefMessage(PrepareNewTagActivity.nfc_payload);
-                ndef.close();
-                success = 1;
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (FormatException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+			// Attempt to access the card first as a smartcard and then as an NDEF card.
 
-            setResult(success);
+			boolean appletWritten = false;
+			try {
+				KPNFCApplet applet = new KPNFCApplet();
+				appletWritten = applet.write(intent, randomBytes, createNdefMessage(Settings.KEY_TYPE_APP, null));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			boolean ndefWritten = false;
+			if(!appletWritten) {
+				// try NDEF instead.
+				ndefWritten = writeToNDEF(intent);
+			}
+
+			Intent resultIntent = new Intent();
+			resultIntent.putExtra("randomBytes", randomBytes);
+
+			setResult(appletWritten || ndefWritten ? 1 : 0, resultIntent);
             finish();
         }
+
+		if(action.equals(NfcAdapter.ACTION_TAG_DISCOVERED)) {
+			System.out.println("Tag only...");
+		}
     }
+
+	protected boolean writeToNDEF(Intent intent) {
+		int success = 0;
+		Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+
+		NdefMessage message = createNdefMessage(Settings.KEY_TYPE_RAW, randomBytes);
+
+		// Write the payload to the tag.
+		Ndef ndef = Ndef.get(tag);
+		try {
+			ndef.connect();
+			ndef.writeNdefMessage(message);
+			ndef.close();
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (FormatException e) {
+			e.printStackTrace();
+		}
+
+		return false;
+	}
+
 }

@@ -27,19 +27,13 @@
 
 package net.lardcave.keepassnfc;
 
-import java.io.File;
 import java.security.SecureRandom;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.database.Cursor;
 import android.net.Uri;
 import android.nfc.NdefMessage;
-import android.nfc.NdefRecord;
 import android.os.Bundle;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -69,16 +63,14 @@ public class PrepareNewTagActivity extends Activity {
     private static final int REQUEST_NFC_WRITE = 2;
 	private Uri keyfile = null;
 	private Uri database = null;
-	private byte[] random_bytes = new byte[Settings.key_length];
-	public static NdefMessage nfc_payload;
-	
+
 	private int keyfile_option = KEYFILE_NO;
 	private int password_option = PASSWORD_NO;
 	
 	@Override
 	protected void onCreate(Bundle sis) {
 		super.onCreate(sis);
-		setContentView(R.layout.activity_write);
+		setContentView(R.layout.activity_configure);
 		
 		if (sis != null) {
 			password_option = sis.getInt("password_option");
@@ -148,10 +140,8 @@ public class PrepareNewTagActivity extends Activity {
 		b.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View self) {
-				create_random_bytes();
-                self.setEnabled(false);
-                Intent intent = new Intent(getApplicationContext(), WriteNFCActivity.class);
-                startActivityForResult(intent, REQUEST_NFC_WRITE);
+				self.setEnabled(false);
+				switchToWriteNfcActivity(getRandomBytes());
 			}
 		});
 		
@@ -201,8 +191,13 @@ public class PrepareNewTagActivity extends Activity {
             Button nfc_write = (Button) findViewById(R.id.write_nfc);
             nfc_write.setEnabled(true);
 
+			byte[] random_bytes = null;
+
+			if(data != null)
+				random_bytes = data.getExtras().getByteArray("randomBytes");
+
             if (resultCode == 1) {
-                if (encrypt_and_store()) {
+                if (random_bytes != null && encrypt_and_store(random_bytes)) {
                     // Job well done! Let's have some toast.
                     Toast.makeText(getApplicationContext(), "Tag written successfully!", Toast.LENGTH_SHORT).show();
                 } else {
@@ -216,17 +211,16 @@ public class PrepareNewTagActivity extends Activity {
 	}
 
 	
-	private void create_random_bytes()
+	private byte[] getRandomBytes()
 	{
+		byte[] random_bytes = new byte[Settings.key_length];
 		SecureRandom rng = new SecureRandom();		
 		rng.nextBytes(random_bytes);
 
-		// Create the NFC version of this data		
-		NdefRecord ndef_records = NdefRecord.createMime(Settings.nfc_mime_type, random_bytes);
-		nfc_payload = new NdefMessage(ndef_records);
+		return random_bytes;
 	}
 	
-	private boolean encrypt_and_store()
+	private boolean encrypt_and_store(byte[] random_bytes)
 	{	
 		DatabaseInfo dbinfo;
 		int config;
@@ -293,6 +287,13 @@ public class PrepareNewTagActivity extends Activity {
 	{
 		RadioButton rb = (RadioButton) findViewById(id);
 		rb.setChecked(checked);
+	}
+
+	protected void switchToWriteNfcActivity(byte[] randomBytes)
+	{
+		Intent intent = new Intent(getApplicationContext(), WriteNFCActivity.class);
+		intent.putExtra("randomBytes", randomBytes);
+		startActivityForResult(intent, REQUEST_NFC_WRITE);
 	}
 
 /*	@Override
