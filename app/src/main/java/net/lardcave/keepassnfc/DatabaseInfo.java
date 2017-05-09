@@ -51,12 +51,12 @@ class DatabaseInfo {
 	String password;
 	byte[] encrypted_password;
 
-	public int config;
+	int config;
 
 	private static final String CIPHER = "AES/CBC/NoPadding";
     private static final String LOG_TAG = "keepassnfc";
 	
-	public DatabaseInfo(Uri database, Uri keyfile, String password, int config)
+	DatabaseInfo(Uri database, Uri keyfile, String password, int config)
 	{
 		this.database = database;
 		this.keyfile = keyfile;
@@ -65,7 +65,7 @@ class DatabaseInfo {
 		this.config = config;
 	}
 
-	public DatabaseInfo(Uri database, Uri keyfile, byte[] encrypted_password, int config)
+	private DatabaseInfo(Uri database, Uri keyfile, byte[] encrypted_password, int config)
 	{
 		this.database = database;
 		this.keyfile = keyfile;
@@ -130,13 +130,13 @@ class DatabaseInfo {
 		}
 	}
 
-	public String set_decrypted_password(byte[] decrypted_bytes) {
+	String set_decrypted_password(byte[] decrypted_bytes) {
 		int length = (int)decrypted_bytes[0];
 		password = new String(decrypted_bytes, 1, length);
 		return password;
 	}
 	
-	public String decrypt_password(byte[] key) throws CryptoFailedException
+	String decrypt_password(byte[] key) throws CryptoFailedException
 	{
 		byte[] decrypted;
 		Cipher cipher = get_cipher(key, Cipher.DECRYPT_MODE);
@@ -194,7 +194,6 @@ class DatabaseInfo {
 		 *
 		 * The encryption key is stored on the NFC tag.
 		*/
-		byte encrypted_config;
 		encrypted_password = encrypt_password(key);
 
 		retainOrUpdateUriAccess(ctx);
@@ -234,10 +233,10 @@ class DatabaseInfo {
 		return true;
 	}
 	
-	public static DatabaseInfo deserialise(Context ctx)
+	static DatabaseInfo deserialise(Context ctx)
 	{
-		int config = Settings.CONFIG_NOTHING;
-		String databaseString, keyfileString, password;
+		int config;
+		String databaseString, keyfileString;
 		byte[] buffer = new byte[1024];
 		byte[] encrypted_password = new byte[Settings.max_password_length];
 
@@ -272,7 +271,9 @@ class DatabaseInfo {
 	{
 		byte[] bytes = new byte[2];
 		short[] shorts = new short[1];
-		fis.read(bytes, 0, 2);
+		if(fis.read(bytes, 0, 2) != 2) {
+            throw new IOException("Short read while reading short");
+        }
 
 		ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
 		return shorts[0];
@@ -282,7 +283,12 @@ class DatabaseInfo {
 	{
 		int length = read_short(fis);
 		
-		fis.read(buffer, 0, length);
+		int actual_length = fis.read(buffer, 0, length);
+
+        if(actual_length != length) {
+            throw new IOException("read_bytes: couldn't read desired length");
+        }
+
 		return length;		
 	}
 	

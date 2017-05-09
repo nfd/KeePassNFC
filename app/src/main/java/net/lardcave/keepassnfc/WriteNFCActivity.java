@@ -37,7 +37,6 @@ import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
-import android.nfc.tech.IsoDep;
 import android.nfc.tech.Ndef;
 import android.os.Bundle;
 import android.util.Log;
@@ -53,6 +52,10 @@ public class WriteNFCActivity extends Activity {
         super.onCreate(sis);
 
 		randomBytes = getIntent().getExtras().getByteArray("randomBytes");
+
+		if(randomBytes == null) {
+            throw new RuntimeException("No randombytes supplied");
+        }
 
 		if(randomBytes.length != Settings.key_length) {
 			throw new RuntimeException("Unexpected key length " + randomBytes.length);
@@ -162,7 +165,6 @@ public class WriteNFCActivity extends Activity {
     }
 
 	protected boolean writeToNDEF(Intent intent) {
-		int success = 0;
 		Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
 
 		NdefMessage message = createNdefMessage(Settings.KEY_TYPE_RAW, randomBytes);
@@ -174,13 +176,11 @@ public class WriteNFCActivity extends Activity {
 			ndef.writeNdefMessage(message);
 			ndef.close();
 			return true;
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (FormatException e) {
+		} catch (IOException | FormatException e) {
 			e.printStackTrace();
 		}
 
-		return false;
+        return false;
 	}
 
 }

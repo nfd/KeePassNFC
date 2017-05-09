@@ -32,7 +32,6 @@ import java.security.SecureRandom;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
-import android.nfc.NdefMessage;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -75,8 +74,10 @@ public class PrepareNewTagActivity extends Activity {
 		if (sis != null) {
 			password_option = sis.getInt("password_option");
 			keyfile_option  = sis.getInt("keyfile_option");
-			if (sis.getString("keyfile").compareTo("") != 0)
-				keyfile = Uri.parse(sis.getString("keyfile"));
+			String keyfile_string = sis.getString("keyfile");
+
+			if (keyfile_string != null && keyfile_string.compareTo("") != 0)
+				keyfile = Uri.parse(keyfile_string);
 			else
 				keyfile = null;
 		}
@@ -225,7 +226,6 @@ public class PrepareNewTagActivity extends Activity {
 	{	
 		DatabaseInfo dbinfo;
 		int config;
-		String keyfile_uri_string;
 		String password;
 		
 		if (database == null) {

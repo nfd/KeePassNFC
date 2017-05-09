@@ -28,52 +28,52 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-public class KPNFCApplet {
-	public static final String LOG_TAG = "KPNFC Applet";
+class KPNFCApplet {
+	private static final String LOG_TAG = "KPNFC Applet";
 	private final static byte CLA_CARD_KPNFC_CMD = (byte) 0xB0;
 
 	private final static byte INS_CARD_GET_CARD_PUBKEY = (byte) 0x70;
 	private final static byte INS_CARD_SET_PASSWORD_KEY = (byte) 0x71;
 	private final static byte INS_CARD_PREPARE_DECRYPTION = (byte) 0x72;
 	private final static byte INS_CARD_DECRYPT_BLOCK = (byte) 0x73;
-	private final static byte INS_CARD_GET_VERSION = (byte) 0x74;
-	private final static byte INS_CARD_GENERATE_CARD_KEY = (byte) 0x75;
+	//private final static byte INS_CARD_GET_VERSION = (byte) 0x74;
+	//private final static byte INS_CARD_GENERATE_CARD_KEY = (byte) 0x75;
 	private final static byte INS_CARD_WRITE_TO_SCRATCH = (byte) 0x76;
 
-	private final static byte RESPONSE_SUCCEEDED = (byte) 0x1;
-	private final static byte RESPONSE_FAILED = (byte) 0x2;
+	//private final static byte RESPONSE_SUCCEEDED = (byte) 0x1;
+	//private final static byte RESPONSE_FAILED = (byte) 0x2;
 
-	public static final byte OFFSET_CLA = 0x00;
-	public static final byte OFFSET_INS = 0x01;
-	public static final byte OFFSET_P1 = 0x02;
-	public static final byte OFFSET_P2 = 0x03;
-	public static final byte OFFSET_LC = 0x04;
-	public static final byte OFFSET_DATA = 0x05;
-	public static final byte HEADER_LENGTH = 0x05;
+	private static final byte OFFSET_CLA = 0x00;
+	private static final byte OFFSET_INS = 0x01;
+	private static final byte OFFSET_P1 = 0x02;
+	private static final byte OFFSET_P2 = 0x03;
+	private static final byte OFFSET_LC = 0x04;
+	private static final byte OFFSET_DATA = 0x05;
+	private static final byte HEADER_LENGTH = 0x05;
 
-	public static final int MAX_CHUNK_SIZE = 120;
+	private static final int MAX_CHUNK_SIZE = 120;
 
 	// AID of the KPNFC decryptor: f0 37 54 72  80 4f d5 fa  0f 24 3e 42  c1 b6 38 25
-	public static final byte[] selectKPNFCAppletAPDU = {
+	private static final byte[] selectKPNFCAppletAPDU = {
 			(byte) 0x00, (byte) 0xA4, (byte) 0x04, (byte) 0x00, (byte) 0x10,
 			(byte) 0xf0, (byte) 0x37, (byte) 0x54, (byte) 0x72, (byte) 0x80, (byte) 0x4f, (byte) 0xd5, (byte) 0xfa, // AID
 			(byte) 0x0f, (byte) 0x24, (byte) 0x3e, (byte) 0x42, (byte) 0xc1, (byte) 0xb6, (byte) 0x38, (byte) 0x25, // AID
 			(byte) 0x00,
 	};
 
-	public static final byte[] selectNdefAppletAPDU = {
+	private static final byte[] selectNdefAppletAPDU = {
 			(byte) 0x00, (byte) 0xA4, (byte) 0x04, (byte) 0x00, (byte) 0x07,
 			(byte) 0xD2, (byte) 0x76, (byte) 0x00, (byte) 0x00, (byte) 0x85, (byte) 0x01, (byte) 0x01,
 			(byte) 0x00,
 	};
 
-	public static final byte[] selectNdefDataAPDU = {
+	private static final byte[] selectNdefDataAPDU = {
 			(byte) 0x00, (byte) 0xA4, (byte) 0x00, (byte) 0x0C, (byte) 0x02,
 			(byte) 0xE1, (byte) 0x04,
 			(byte) 0x00,
 	};
 
-	SecureRandom rng = new SecureRandom();
+	private SecureRandom rng = new SecureRandom();
 
 	private IsoDep connect(Intent intent) throws IOException {
 		Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
@@ -94,7 +94,7 @@ public class KPNFCApplet {
 		return channel;
 	}
 
-	public boolean write(Intent intent, byte[] secret, NdefMessage ndefMessage) throws IOException {
+	boolean write(Intent intent, byte[] secret, NdefMessage ndefMessage) throws IOException {
 		IsoDep channel = connect(intent);
 		if(channel == null) {
 			return false;
@@ -138,7 +138,7 @@ public class KPNFCApplet {
 		return true;
 	}
 
-	public byte[] decrypt(Intent intent, byte[] encrypted) throws IOException {
+	byte[] decrypt(Intent intent, byte[] encrypted) throws IOException {
 		if(encrypted.length % 16 != 0) {
 			Log.d(LOG_TAG, "Encrypted bytes not a multiple of AES block size");
 			return null;
@@ -172,7 +172,6 @@ public class KPNFCApplet {
 		byte[] transactionIv = randomBytes(16);
 
 		// Connect to the card and establish a transaction key.
-		byte[] apdu;
 		byte[] transactionParameters = new byte[32];
 
 		// Prepare decryption: 16 bytes of transaction key, encrypted with the card key,
@@ -215,7 +214,7 @@ public class KPNFCApplet {
 		return decryptWithTransactionKey(transactionKeyEncrypted, transactionKey, transactionIv);
 	}
 
-	public byte[] decryptWithTransactionKey(byte[] source, byte[] keyBytes, byte[] ivBytes)
+	private byte[] decryptWithTransactionKey(byte[] source, byte[] keyBytes, byte[] ivBytes)
 	{
 		Cipher cipher;
 
@@ -260,7 +259,7 @@ public class KPNFCApplet {
 		}
 	}
 
-	public void setPasswordKey(IsoDep channel, byte[] passwordKey) throws IOException {
+	private void setPasswordKey(IsoDep channel, byte[] passwordKey) throws IOException {
 		byte[] encryptedPasswordKey = encryptWithCardKey(channel, passwordKey);
 		if(encryptedPasswordKey == null) {
 			return;
@@ -272,7 +271,7 @@ public class KPNFCApplet {
 		channel.transceive(command);
 	}
 
-	public void writeToScratchArea(IsoDep channel, byte[] data) throws IOException {
+	private void writeToScratchArea(IsoDep channel, byte[] data) throws IOException {
 		for(int offset = 0; offset < data.length; offset += MAX_CHUNK_SIZE) {
 			int amount = data.length - offset;
 			if(amount > MAX_CHUNK_SIZE)
@@ -284,7 +283,7 @@ public class KPNFCApplet {
 			System.arraycopy(data, offset, args, 2, amount);
 
 			byte[] command = constructApdu(INS_CARD_WRITE_TO_SCRATCH, args);
-			byte[] response = channel.transceive(command);
+			channel.transceive(command);
 		}
 	}
 
@@ -320,7 +319,7 @@ public class KPNFCApplet {
 		}
 	}
 
-	protected RSAPublicKey getCardPubKey(IsoDep channel) throws IOException {
+	private RSAPublicKey getCardPubKey(IsoDep channel) throws IOException {
 		byte[] args = new byte[3];
 
 		args[0] = 1; // get exponent
@@ -338,7 +337,7 @@ public class KPNFCApplet {
 
 		List<byte[]> modulusPortions = new ArrayList<>();
 		args[0] = 2; // get modulus
-		short offset = 0, bytesToGo = 0;
+		short offset = 0, bytesToGo;
 		do {
 			putShort(args, 1, offset);
 			command = constructApdu(INS_CARD_GET_CARD_PUBKEY, args);
@@ -385,12 +384,12 @@ public class KPNFCApplet {
 		return publicKey;
 	}
 
-	public static byte[] constructApdu(byte command) {
+	private static byte[] constructApdu(byte command) {
 		byte[] nothing = {};
 		return constructApdu(command, nothing);
 	}
 
-	public static byte[] constructApdu(byte command, byte[] data)
+	private static byte[] constructApdu(byte command, byte[] data)
 	{
 		byte[] apdu = new byte[HEADER_LENGTH + data.length];
 		apdu[OFFSET_CLA] = CLA_CARD_KPNFC_CMD;
@@ -404,17 +403,18 @@ public class KPNFCApplet {
 		return apdu;
 	}
 
-	protected short getShort(byte[] buffer, int idx) {
+	private short getShort(byte[] buffer, int idx) {
 		// assumes big-endian which seems to be how JavaCard rolls
 		return (short)( (((buffer[idx] & 0xff) << 8) | (buffer[idx + 1] & 0xff) ));
 	}
 
-	protected void putShort(byte[] args, int idx, short val) {
+	private void putShort(byte[] args, int idx, short val) {
 		args[idx] = (byte)((val & 0xff) >> 8);
 		args[idx + 1] = (byte)(val & 0xff);
 	}
 
-	public static String toHex(byte[] data) {
+	@SuppressWarnings("unused")
+    public static String toHex(byte[] data) {
 		StringBuilder buf = new StringBuilder();
 
 		for(byte b: data) {
@@ -426,8 +426,10 @@ public class KPNFCApplet {
 		return buf.toString();
 	}
 
-	public static char nibbleToChar(byte nibble) {
-		assert(nibble < 16);
+	private static char nibbleToChar(byte nibble) {
+		if(nibble >= 16) {
+			throw new RuntimeException("nibbleToChar: value >= 16");
+		}
 
 		if(nibble < 10)
 			return (char)('0' + nibble);
