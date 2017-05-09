@@ -40,6 +40,7 @@ import java.nio.ByteBuffer;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.provider.DocumentsContract;
 import android.util.Log;
 import android.content.Context;
 
@@ -173,14 +174,14 @@ class DatabaseInfo {
 	private void persistAccessToFile(Context ctx, Uri uri) {
 		// https://developer.android.com/guide/topics/providers/document-provider.html#permissions
 		// via http://stackoverflow.com/a/21640230
-		try {
+		if(DocumentsContract.isDocumentUri(ctx, uri)) {
 			ctx.getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-		} catch (SecurityException e) {
-			e.printStackTrace();
+		} else {
+			Log.e(LOG_TAG, "URI " + uri.toString() + " is not a document and can't be persisted");
 		}
 	}
 
-	private void retainOrUpdateUriAccess(Context ctx) {
+	void retainOrUpdateUriAccess(Context ctx) {
 		if(database != null)
 			persistAccessToFile(ctx, database);
 
@@ -195,8 +196,6 @@ class DatabaseInfo {
 		 * The encryption key is stored on the NFC tag.
 		*/
 		encrypted_password = encrypt_password(key);
-
-		retainOrUpdateUriAccess(ctx);
 
 		FileOutputStream configuration;
 		try {
@@ -263,7 +262,6 @@ class DatabaseInfo {
 		Uri keyfile = keyfileString.equals("") ? null: Uri.parse(keyfileString);
 		
 		DatabaseInfo dbInfo = new DatabaseInfo(database, keyfile, encrypted_password, config);
-		dbInfo.retainOrUpdateUriAccess(ctx);
 		return dbInfo;
 	}
 

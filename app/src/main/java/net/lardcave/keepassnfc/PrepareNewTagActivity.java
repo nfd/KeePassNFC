@@ -100,10 +100,11 @@ public class PrepareNewTagActivity extends Activity {
 	}
 
 	private void openPicker(int result) {
-		// Must use GET_CONTENT rather than OPEN_DOCUMENT if we want to access content providers
-		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+		// NB GET_CONTENT not guaranteed to return persistable URIs (E.g. Drive does not)
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
-		intent.setType("*/*"); // https://code.google.com/p/android/issues/detail?id=63550
+		intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+		intent.setType("*/*");
 		startActivityForResult(intent, result);
 	}
 	
@@ -232,7 +233,7 @@ public class PrepareNewTagActivity extends Activity {
 			Toast.makeText(getApplicationContext(), "Please select a database first", Toast.LENGTH_SHORT).show();
 			return false;
 		}
-		
+
 		if (password_option == PASSWORD_ASK)
 			config = Settings.CONFIG_PASSWORD_ASK;
 		else
@@ -247,7 +248,9 @@ public class PrepareNewTagActivity extends Activity {
 		}
 		
 		dbinfo = new DatabaseInfo(database, keyfile_option == KEYFILE_NO? null: keyfile, password, config);
-		
+
+		dbinfo.retainOrUpdateUriAccess(getApplicationContext());
+
 		try {
 			return dbinfo.serialise(this, random_bytes);
 		} catch (CryptoFailedException e) {
