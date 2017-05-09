@@ -37,7 +37,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.Cipher;
 import java.nio.ByteOrder;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -46,11 +45,11 @@ import android.content.Context;
 
 /* Represents the on-disk database info including encrypted password */
 
-public class DatabaseInfo {
-	public Uri database;
-	public Uri keyfile;
-	public String password;
-	public byte[] encrypted_password;
+class DatabaseInfo {
+	Uri database;
+	Uri keyfile;
+	String password;
+	byte[] encrypted_password;
 
 	public int config;
 
@@ -171,13 +170,17 @@ public class DatabaseInfo {
 	}
 	
 	// Persist access to the file.
-	protected void persistAccessToFile(Context ctx, Uri uri) {
+	private void persistAccessToFile(Context ctx, Uri uri) {
 		// https://developer.android.com/guide/topics/providers/document-provider.html#permissions
 		// via http://stackoverflow.com/a/21640230
-		ctx.getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		try {
+			ctx.getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public void retainOrUpdateUriAccess(Context ctx) {
+	private void retainOrUpdateUriAccess(Context ctx) {
 		if(database != null)
 			persistAccessToFile(ctx, database);
 
@@ -185,7 +188,7 @@ public class DatabaseInfo {
 			persistAccessToFile(ctx, keyfile);
 	}
 
-	public boolean serialise(Context ctx, byte[] key) throws CryptoFailedException
+	boolean serialise(Context ctx, byte[] key) throws CryptoFailedException
 	{
 		/* Encrypt the configuration (database, password, key location) and store it on the Android device.
 		 *

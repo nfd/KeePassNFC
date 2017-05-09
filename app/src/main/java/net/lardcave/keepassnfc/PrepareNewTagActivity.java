@@ -99,7 +99,8 @@ public class PrepareNewTagActivity extends Activity {
 	}
 
 	private void openPicker(int result) {
-		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+		// Must use GET_CONTENT rather than OPEN_DOCUMENT if we want to access content providers
+		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
 		intent.setType("*/*"); // https://code.google.com/p/android/issues/detail?id=63550
 		startActivityForResult(intent, result);
