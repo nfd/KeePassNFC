@@ -203,6 +203,12 @@ public class PrepareNewTagActivity extends Activity {
 	    	break;
         case REQUEST_NFC_WRITE:
             // Re-enable NFC writing.
+
+	        if(resultCode != 1) {
+		        Toast.makeText(getApplicationContext(), "Couldn't write data to card!", Toast.LENGTH_SHORT).show();
+		        break;
+	        }
+
             Button nfc_write = (Button) findViewById(R.id.write_nfc);
             nfc_write.setEnabled(true);
 

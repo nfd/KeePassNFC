@@ -89,9 +89,12 @@ public class KPApplet {
 		// it's hard to say exactly how long.
 		channel.setTimeout(2000);
 
-		channel.transceive(selectKPNFCAppletAPDU);
-
-		return channel;
+		byte[] result = channel.transceive(selectKPNFCAppletAPDU);
+		if(!resultWasSuccess(result, 2)) {
+			return null;
+		} else {
+			return channel;
+		}
 	}
 
 	public boolean write(Intent intent, byte[] secret) throws IOException {
@@ -104,6 +107,7 @@ public class KPApplet {
 
 			// Attempt to write NDEF as well.
 			writeNdef(channel, KPNdef.createWakeOnlyNdefMessage());
+
 			channel.close();
 
 			return true;
@@ -259,16 +263,18 @@ public class KPApplet {
 		}
 	}
 
-	private void setPasswordKey(IsoDep channel, byte[] passwordKey) throws IOException {
+	private boolean setPasswordKey(IsoDep channel, byte[] passwordKey) throws IOException {
 		byte[] encryptedPasswordKey = encryptWithCardKey(channel, passwordKey);
 		if(encryptedPasswordKey == null) {
-			return;
+			return false;
 		}
 
 		writeToScratchArea(channel, encryptedPasswordKey);
 
 		byte[] command = constructApdu(INS_CARD_SET_PASSWORD_KEY);
-		channel.transceive(command);
+		byte[] result = channel.transceive(command);
+
+		return resultWasSuccess(result, 2);
 	}
 
 	private void writeToScratchArea(IsoDep channel, byte[] data) throws IOException {
