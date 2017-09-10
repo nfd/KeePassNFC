@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">KeePassNFC</string>
+	<string name="app_name">KeePassNFC</string>
+	<string name="title_activity_no_keepass">NoKeepassActivity</string>
 </resources>

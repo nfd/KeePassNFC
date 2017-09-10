@@ -32,16 +32,14 @@ import java.io.IOException;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
-import android.nfc.FormatException;
-import android.nfc.NdefMessage;
-import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
-import android.nfc.tech.Ndef;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+
+import net.lardcave.keepassnfc.nfccomms.KPApplet;
+import net.lardcave.keepassnfc.nfccomms.KPNdef;
 
 public class WriteNFCActivity extends Activity {
     private static final String LOG_TAG = "WriteNFCActivity";
@@ -74,28 +72,6 @@ public class WriteNFCActivity extends Activity {
             }
         });
     }
-
-	private static NdefMessage createNdefMessage(int key_type, byte[] secretKey)
-	{
-		byte[] messageBytes;
-
-		switch(key_type) {
-			case Settings.KEY_TYPE_RAW:
-				messageBytes = new byte[Settings.key_type_length + Settings.key_length];
-				messageBytes[0] = (byte)Settings.KEY_TYPE_RAW;
-				System.arraycopy(secretKey, 0, messageBytes, 1, Settings.key_length);
-				break;
-			case Settings.KEY_TYPE_APP:
-				messageBytes = new byte[Settings.key_type_length];
-				messageBytes[0] = (byte)Settings.KEY_TYPE_APP;
-				break;
-			default:
-				throw new RuntimeException("Unexpected key type");
-		}
-		// Create the NFC version of this data
-		NdefRecord ndef_records = NdefRecord.createMime(Settings.nfc_mime_type, messageBytes);
-		return new NdefMessage(ndef_records);
-	}
 
     private void nfc_enable()
     {
@@ -132,7 +108,6 @@ public class WriteNFCActivity extends Activity {
     public void onNewIntent(Intent intent)
     {
         String action = intent.getAction();
-		Log.d(LOG_TAG, "Got intent " + intent);
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
 				|| NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)) {
 
@@ -140,8 +115,8 @@ public class WriteNFCActivity extends Activity {
 
 			boolean appletWritten = false;
 			try {
-				KPNFCApplet applet = new KPNFCApplet();
-				appletWritten = applet.write(intent, randomBytes, createNdefMessage(Settings.KEY_TYPE_APP, null));
+				KPApplet applet = new KPApplet();
+				appletWritten = applet.write(intent, randomBytes);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -149,7 +124,9 @@ public class WriteNFCActivity extends Activity {
 			boolean ndefWritten = false;
 			if(!appletWritten) {
 				// try NDEF instead.
-				ndefWritten = writeToNDEF(intent);
+				Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+				KPNdef ndef = new KPNdef(randomBytes);
+				ndefWritten = ndef.write(tag);
 			}
 
 			Intent resultIntent = new Intent();
@@ -163,24 +140,4 @@ public class WriteNFCActivity extends Activity {
 			System.out.println("Tag only...");
 		}
     }
-
-	protected boolean writeToNDEF(Intent intent) {
-		Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-
-		NdefMessage message = createNdefMessage(Settings.KEY_TYPE_RAW, randomBytes);
-
-		// Write the payload to the tag.
-		Ndef ndef = Ndef.get(tag);
-		try {
-			ndef.connect();
-			ndef.writeNdefMessage(message);
-			ndef.close();
-			return true;
-		} catch (IOException | FormatException e) {
-			e.printStackTrace();
-		}
-
-        return false;
-	}
-
 }

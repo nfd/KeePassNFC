@@ -31,50 +31,38 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
-import android.nfc.NdefMessage;
-import android.nfc.NdefRecord;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.util.Log;
 import android.widget.Toast;
 
+import net.lardcave.keepassnfc.keepassapp.KeePassApp;
+import net.lardcave.keepassnfc.keepassapp.KeePassApps;
+import net.lardcave.keepassnfc.nfccomms.KPApplet;
+import net.lardcave.keepassnfc.nfccomms.KPNdef;
+
 import java.io.IOException;
-import java.util.Arrays;
 
 public class ReadActivity extends Activity {
-	private static final String TAG = "KPNFC Read";
+	private static final String LOG_TAG = "KPNFC Read";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		
-		byte[] payload = null;
 
-		Log.d(TAG, "Read activity start");
-		
+		KPNdef ndef = null;
 		Intent intent = getIntent();
 		if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
-	        Parcelable[] rawMsgs = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
-	        if (rawMsgs != null) {
-	            NdefMessage [] msgs = new NdefMessage[rawMsgs.length];
-	            for (int j = 0; j < rawMsgs.length; j++) {
-	                msgs[j] = (NdefMessage) rawMsgs[j];
-	                NdefRecord record = msgs[j].getRecords()[0];
-	                if (record.getTnf() == NdefRecord.TNF_MIME_MEDIA)
-	                {
-	                	String mimetype = record.toMimeType();
-	                	if (mimetype.equals(Settings.nfc_mime_type)) {
-		                	payload = record.getPayload();
-	                	}
-	                }
-	            }
-	        }
+			ndef = new KPNdef(getIntent());
 		}
 
-		if (payload != null && payload.length > 0) {
+		if (ndef != null && ndef.readWasSuccessful()) {
 			DatabaseInfo dbinfo = DatabaseInfo.deserialise(this);
 
 			if(dbinfo == null) {
@@ -82,32 +70,29 @@ public class ReadActivity extends Activity {
 				return;
 			}
 
-			switch(payload[0]) {
-				case Settings.KEY_TYPE_RAW: {
+			byte[] secretKey = ndef.getSecretKey();
 
-					byte[] decryption_key = Arrays.copyOfRange(payload, 1, payload.length);
-					try {
-						dbinfo.decrypt_password(decryption_key);
-					} catch (CryptoFailedException e) {
-						Toast.makeText(this, "Couldn't decrypt data. Re-do key?", Toast.LENGTH_SHORT).show();
-						dbinfo = null;
-					}
-					break;
+			if(secretKey != null)  {
+				/* NDEF message contained the decryption key -- don't use applet. */
+				try {
+					dbinfo.decrypt_password(secretKey);
+				} catch (CryptoFailedException e) {
+					Toast.makeText(this, "Couldn't decrypt data. Re-do key?", Toast.LENGTH_SHORT).show();
+					dbinfo = null;
 				}
-				case Settings.KEY_TYPE_APP: {
+			} else {
+				/* NDEF message contains no secrets -- decrypt using applet stored on card. */
+				KPApplet applet = new KPApplet();
+				byte[] decrypted_bytes = null;
+				try {
+					decrypted_bytes = applet.decrypt(intent, dbinfo.encrypted_password);
+				} catch (IOException e) {
+					Toast.makeText(this, "Card communication failed.", Toast.LENGTH_SHORT).show();
+					dbinfo = null;
+				}
 
-					KPNFCApplet applet = new KPNFCApplet();
-					byte[] decrypted_bytes = null;
-					try {
-						decrypted_bytes = applet.decrypt(intent, dbinfo.encrypted_password);
-					} catch (IOException e) {
-						Toast.makeText(this, "Card communication failed.", Toast.LENGTH_SHORT).show();
-						dbinfo = null;
-					}
-
-					if(decrypted_bytes != null) {
-						dbinfo.set_decrypted_password(decrypted_bytes);
-					}
+				if(decrypted_bytes != null) {
+					dbinfo.set_decrypted_password(decrypted_bytes);
 				}
 			}
 
@@ -121,26 +106,12 @@ public class ReadActivity extends Activity {
 
 	private boolean startKeepassActivity(DatabaseInfo dbinfo)
 	{
-		Intent intent = new Intent();
-		
-		intent.setComponent(new ComponentName("com.android.keepass", "com.keepassdroid.PasswordActivity"));
-		intent.setAction(Intent.ACTION_VIEW);
+		KeePassApp app = KeePassApps.get().forId(dbinfo.getKeepassAppId());
 
-		intent.setData(dbinfo.database);
-		intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-		if(dbinfo.keyfile != null) {
-			// Use ClipData in order to pass permissions for multiple content:// URIs.
-			// See https://developer.android.com/reference/android/content/Intent.html#setClipData%28android.content.ClipData%29
-			ClipData.Item item = new ClipData.Item(dbinfo.keyfile);
-			ClipData clipData = new ClipData("keyFile", new String[] {ClipDescription.MIMETYPE_TEXT_URILIST}, item);
-			intent.setClipData(clipData);
-		}
-
-		intent.putExtra("password", dbinfo.password);
-		intent.putExtra("launchImmediately", dbinfo.config != Settings.CONFIG_PASSWORD_ASK);
+		Intent intent = app.getIntent(this, dbinfo);
 
 		startActivity(intent);
+
 		return true;
 	}
 

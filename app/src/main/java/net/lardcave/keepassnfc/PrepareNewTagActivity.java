@@ -28,6 +28,8 @@
 package net.lardcave.keepassnfc;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -37,43 +39,46 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.RadioButton;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import net.lardcave.keepassnfc.keepassapp.KeePassApp;
+import net.lardcave.keepassnfc.keepassapp.KeePassApps;
 
 
 /* Probably want this to have foreground NFC-everything, so that people can scan a fob and then press the button?
  * Does that even work?
  */
 public class PrepareNewTagActivity extends Activity {
+	private class StringWithId {
+		private String value, id;
 
-	private static final int PASSWORD_NO = 0;
-	private static final int PASSWORD_ASK = 1;
-	private static final int PASSWORD_YES = 2;
-	private static final int KEYFILE_NO = 0;
-	private static final int KEYFILE_YES = 1;
+		StringWithId(String value, String id) {this.value = value; this.id = id;}
+
+		@Override
+		public String toString() { return value; }
+	}
+
 	private static final int REQUEST_KEYFILE = 0;
 	private static final int REQUEST_DATABASE = 1;
     private static final int REQUEST_NFC_WRITE = 2;
 	private Uri keyfile = null;
 	private Uri database = null;
 
-	private int keyfile_option = KEYFILE_NO;
-	private int password_option = PASSWORD_NO;
-	
+	private String selectedAppId = null;
+	private List<StringWithId> availableAppNames = new ArrayList<>();
+
 	@Override
 	protected void onCreate(Bundle sis) {
 		super.onCreate(sis);
 		setContentView(R.layout.activity_configure);
 		
 		if (sis != null) {
-			password_option = sis.getInt("password_option");
-			keyfile_option  = sis.getInt("keyfile_option");
 			String keyfile_string = sis.getString("keyfile");
 
 			if (keyfile_string != null && keyfile_string.compareTo("") != 0)
@@ -81,8 +86,20 @@ public class PrepareNewTagActivity extends Activity {
 			else
 				keyfile = null;
 		}
-		
-		initialiseView();
+
+		/* Populate the list of available apps */
+		for(KeePassApp app: KeePassApps.get().getAvailableApps(getPackageManager())) {
+			availableAppNames.add(new StringWithId(app.getName(), app.getId()));
+		}
+
+		if(availableAppNames.isEmpty()) {
+			Intent intent = new Intent();
+			intent.setClass(this, NoKeepassActivity.class);
+			startActivity(intent);
+			finish();
+		} else {
+			initialiseView();
+		}
 	}
 
 	@Override
@@ -93,51 +110,22 @@ public class PrepareNewTagActivity extends Activity {
 	    	sis.putString("keyfile", "");
 	    else
 	    	sis.putString("keyfile", keyfile.toString());
-	    sis.putInt("keyfile_option", keyfile_option);
-	    sis.putInt("password_option", password_option);
 
 		Log.d("KPNFC", "Saved instance state");
 	}
 
 	private void openPicker(int result) {
-		// NB GET_CONTENT not guaranteed to return persistable URIs (E.g. Drive does not)
+		// NB GET_CONTENT not guaranteed to return persistable URIs (E.g. Drive does not), hence OPEN_DOCUMENT here
 		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
 		intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
 		intent.setType("*/*");
 		startActivityForResult(intent, result);
 	}
-	
+
 	private void initialiseView()
 	{
 		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
-		
-		updateRadioViews();
-		updateNonRadioViews();
-		
-		RadioButton rb;
-		
-		rb = (RadioButton) findViewById(R.id.keyfile_no);
-		rb.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-			@Override
-			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				if (isChecked)
-					keyfile_option = KEYFILE_NO;
-				else
-					keyfile_option = KEYFILE_YES;
-				updateNonRadioViews();
-			}});
-
-		rb = (RadioButton) findViewById(R.id.password_yes);
-		rb.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-			@Override
-			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				if (isChecked)
-					password_option = PASSWORD_YES;
-				else
-					password_option = PASSWORD_NO;
-				updateNonRadioViews();
-			}});
 		
 		Button b = (Button) findViewById(R.id.write_nfc);
 		b.setOnClickListener(new OnClickListener() {
@@ -147,24 +135,48 @@ public class PrepareNewTagActivity extends Activity {
 				switchToWriteNfcActivity(getRandomBytes());
 			}
 		});
-		
-		ImageButton ib = (ImageButton) findViewById(R.id.choose_keyfile);
-		ib.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View arg0) {
-				keyfile_option = KEYFILE_YES;
-				setRadio(R.id.keyfile_yes, true);
 
-				openPicker(REQUEST_KEYFILE);
-			}
-			
-		});
-		
-		ib = (ImageButton) findViewById(R.id.choose_database);
-		ib.setOnClickListener(new OnClickListener() {
+		findViewById(R.id.rl_database).setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View view) {
 				openPicker(REQUEST_DATABASE);
+			}
+		});
+
+		findViewById(R.id.rl_keyfile).setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				openPicker(REQUEST_KEYFILE);
+			}
+		});
+
+		findViewById(R.id.b_noKeyfile).setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				((TextView)findViewById(R.id.keyfile_name)).setText("");
+			}
+		});
+
+		initialiseAppSpinnerView();
+	}
+
+	private void initialiseAppSpinnerView() {
+		ArrayAdapter<StringWithId> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, availableAppNames);
+		spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+		Spinner appsList = (Spinner)findViewById(R.id.s_keepass_app);
+		appsList.setAdapter(spinnerAdapter);
+
+		appsList.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+				StringWithId selected = (StringWithId)adapterView.getItemAtPosition(i);
+				selectedAppId = selected.id;
+			}
+
+			@Override
+			public void onNothingSelected(AdapterView<?> adapterView) {
+				selectedAppId = null;
 			}
 		});
 	}
@@ -176,7 +188,7 @@ public class PrepareNewTagActivity extends Activity {
 	        if (resultCode == RESULT_OK) {  
 	            // The URI of the selected file 
 	            keyfile = data.getData();
-	            updateNonRadioViews();
+		        ((TextView)findViewById(R.id.keyfile_name)).setText(keyfile.toString());
 	        } else {
 				System.err.println("REQUEST_KEYFILE result code " + resultCode);
 			}
@@ -184,7 +196,7 @@ public class PrepareNewTagActivity extends Activity {
 	    case REQUEST_DATABASE:
 	    	if (resultCode == RESULT_OK) {
 	    		database = data.getData();
-	    		updateNonRadioViews();
+			    ((TextView)findViewById(R.id.database_name)).setText(database.toString());
 	    	} else {
 				System.err.println("REQUEST_DATABASE result code " + resultCode);
 			}
@@ -230,24 +242,19 @@ public class PrepareNewTagActivity extends Activity {
 		String password;
 		
 		if (database == null) {
-			Toast.makeText(getApplicationContext(), "Please select a database first", Toast.LENGTH_SHORT).show();
+			Toast.makeText(this, "Please select a database first", Toast.LENGTH_SHORT).show();
 			return false;
 		}
 
-		if (password_option == PASSWORD_ASK)
-			config = Settings.CONFIG_PASSWORD_ASK;
-		else
-			config = Settings.CONFIG_NOTHING;
-		
-		// Policy: no password is stored as null password (bit silly?)
-		if (password_option == PASSWORD_NO)
-			password = "";
-		else {
-			EditText et_password = (EditText) findViewById(R.id.password);
-			password = et_password.getText().toString();
+		if (selectedAppId == null) {
+			Toast.makeText(this, "Please select an app first", Toast.LENGTH_SHORT).show();
 		}
-		
-		dbinfo = new DatabaseInfo(database, keyfile_option == KEYFILE_NO? null: keyfile, password, config);
+
+		config = DatabaseInfo.CONFIG_NOTHING; // TODO "start immediately"
+		EditText et_password = (EditText) findViewById(R.id.password);
+		password = et_password.getText().toString();
+
+		dbinfo = new DatabaseInfo(database, keyfile, password, config, selectedAppId);
 
 		dbinfo.retainOrUpdateUriAccess(getApplicationContext());
 
@@ -259,53 +266,11 @@ public class PrepareNewTagActivity extends Activity {
 		}
 	}
 
-	private void updateRadioViews()
-	{
-		setRadio(R.id.keyfile_no, keyfile_option == KEYFILE_NO);
-		setRadio(R.id.keyfile_yes, keyfile_option == KEYFILE_YES);
-		setRadio(R.id.password_no, password_option == PASSWORD_NO);
-		setRadio(R.id.password_ask, password_option == PASSWORD_ASK);
-		setRadio(R.id.password_yes, password_option == PASSWORD_YES);		
-	}
-	
-	private void updateNonRadioViews()
-	{
-		EditText et_password = (EditText) findViewById(R.id.password);
-		et_password.setEnabled(password_option == PASSWORD_YES);		
-		
-		TextView tv_keyfile = (TextView) findViewById(R.id.keyfile_name);
-		tv_keyfile.setEnabled(keyfile_option == KEYFILE_YES);
-		if (keyfile != null)
-			tv_keyfile.setText(keyfile.toString());
-		else
-			tv_keyfile.setText("...");
-		
-		TextView tv_database = (TextView) findViewById(R.id.database_name);
-		if (database != null)
-			tv_database.setText(database.toString());
-		else
-			tv_database.setText("...");
-	}
-	
-	private void setRadio(int id, boolean checked)
-	{
-		RadioButton rb = (RadioButton) findViewById(id);
-		rb.setChecked(checked);
-	}
-
 	protected void switchToWriteNfcActivity(byte[] randomBytes)
 	{
 		Intent intent = new Intent(getApplicationContext(), WriteNFCActivity.class);
 		intent.putExtra("randomBytes", randomBytes);
 		startActivityForResult(intent, REQUEST_NFC_WRITE);
 	}
-
-/*	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.write, menu);
-		return true;
-	}
-*/
 
 }

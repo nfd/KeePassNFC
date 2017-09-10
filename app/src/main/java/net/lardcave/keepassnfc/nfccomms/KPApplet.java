@@ -1,4 +1,4 @@
-package net.lardcave.keepassnfc;
+package net.lardcave.keepassnfc.nfccomms;
 
 import android.content.Intent;
 import android.nfc.NdefMessage;
@@ -28,8 +28,8 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-class KPNFCApplet {
-	private static final String LOG_TAG = "KPNFC Applet";
+public class KPApplet {
+	private static final String LOG_TAG = "KPNFC KPApplet";
 	private final static byte CLA_CARD_KPNFC_CMD = (byte) 0xB0;
 
 	private final static byte INS_CARD_GET_CARD_PUBKEY = (byte) 0x70;
@@ -94,7 +94,7 @@ class KPNFCApplet {
 		return channel;
 	}
 
-	boolean write(Intent intent, byte[] secret, NdefMessage ndefMessage) throws IOException {
+	public boolean write(Intent intent, byte[] secret) throws IOException {
 		IsoDep channel = connect(intent);
 		if(channel == null) {
 			return false;
@@ -103,7 +103,7 @@ class KPNFCApplet {
 			setPasswordKey(channel, secret);
 
 			// Attempt to write NDEF as well.
-			writeNdef(channel, ndefMessage);
+			writeNdef(channel, KPNdef.createWakeOnlyNdefMessage());
 			channel.close();
 
 			return true;
@@ -138,7 +138,7 @@ class KPNFCApplet {
 		return true;
 	}
 
-	byte[] decrypt(Intent intent, byte[] encrypted) throws IOException {
+	public byte[] decrypt(Intent intent, byte[] encrypted) throws IOException {
 		if(encrypted.length % 16 != 0) {
 			Log.d(LOG_TAG, "Encrypted bytes not a multiple of AES block size");
 			return null;

@@ -44,35 +44,50 @@ import android.provider.DocumentsContract;
 import android.util.Log;
 import android.content.Context;
 
+import net.lardcave.keepassnfc.keepassapp.KeePassApps;
+
 /* Represents the on-disk database info including encrypted password */
 
-class DatabaseInfo {
-	Uri database;
-	Uri keyfile;
-	String password;
-	byte[] encrypted_password;
+public class DatabaseInfo {
+	public static final int CONFIG_NOTHING = 0;
+	public static final int CONFIG_PASSWORD_ASK = 1;
+	public static final int CONFIG_DBVERSION_EXTENDED = 0x80; // Indicates newer DB version with more fields
 
-	int config;
+	private static final int DB_VERSION_2 = 2;
+
+	public Uri database;
+	public Uri keyfile;
+	public String password;
+	byte[] encrypted_password;
+	private String keepassAppId;
+
+	public int config;
 
 	private static final String CIPHER = "AES/CBC/NoPadding";
     private static final String LOG_TAG = "keepassnfc";
 	
-	DatabaseInfo(Uri database, Uri keyfile, String password, int config)
+	DatabaseInfo(Uri database, Uri keyfile, String password, int config, String keepassAppId)
 	{
 		this.database = database;
 		this.keyfile = keyfile;
 		this.password = password;
 		this.encrypted_password = new byte[Settings.max_password_length];
 		this.config = config;
+		this.keepassAppId = keepassAppId;
 	}
 
-	private DatabaseInfo(Uri database, Uri keyfile, byte[] encrypted_password, int config)
+	private DatabaseInfo(Uri database, Uri keyfile, byte[] encrypted_password, int config, String keepassAppId)
 	{
 		this.database = database;
 		this.keyfile = keyfile;
 		this.password = null;
 		this.encrypted_password = encrypted_password;
 		this.config = config;
+		this.keepassAppId = keepassAppId;
+	}
+
+	public String getKeepassAppId() {
+		return keepassAppId;
 	}
 
 	private static Cipher get_cipher(byte[] key, int mode) throws CryptoFailedException
@@ -207,7 +222,7 @@ class DatabaseInfo {
 		try {
 			String uriString;
 
-			configuration.write(config);
+			configuration.write(config | CONFIG_DBVERSION_EXTENDED);
 
 			uriString = database.toString();
 			configuration.write(to_short(uriString.length()));
@@ -223,6 +238,9 @@ class DatabaseInfo {
 
 			configuration.write(to_short(encrypted_password.length));
 			configuration.write(encrypted_password);
+			configuration.write(DB_VERSION_2);
+			configuration.write(to_short(keepassAppId.length()));
+			configuration.write(keepassAppId.getBytes());
 			configuration.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -235,6 +253,7 @@ class DatabaseInfo {
 	static DatabaseInfo deserialise(Context ctx)
 	{
 		int config;
+		String keepassAppId = KeePassApps.getDefaultApp().getId();
 		String databaseString, keyfileString;
 		byte[] buffer = new byte[1024];
 		byte[] encrypted_password = new byte[Settings.max_password_length];
@@ -250,9 +269,20 @@ class DatabaseInfo {
 		
 		try {
 			config = nfcinfo.read();
+			boolean extended_db_info = ((config & CONFIG_DBVERSION_EXTENDED) != 0);
+
 			databaseString = read_string(nfcinfo, buffer);
 			keyfileString = read_string(nfcinfo, buffer);
 			read_bytes(nfcinfo, encrypted_password);
+
+			if(extended_db_info) {
+				int version = nfcinfo.read();
+				if(version == DB_VERSION_2) {
+					keepassAppId = read_string(nfcinfo, buffer);
+				} else {
+					Log.e(LOG_TAG, "Unknown database version");
+				}
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
@@ -261,7 +291,7 @@ class DatabaseInfo {
 		Uri database = Uri.parse(databaseString);
 		Uri keyfile = keyfileString.equals("") ? null: Uri.parse(keyfileString);
 		
-		DatabaseInfo dbInfo = new DatabaseInfo(database, keyfile, encrypted_password, config);
+		DatabaseInfo dbInfo = new DatabaseInfo(database, keyfile, encrypted_password, config, keepassAppId);
 		return dbInfo;
 	}
 

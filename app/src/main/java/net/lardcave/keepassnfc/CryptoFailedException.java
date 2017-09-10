@@ -1,6 +1,6 @@
 package net.lardcave.keepassnfc;
 
-class CryptoFailedException extends Exception
+public class CryptoFailedException extends Exception
 {
 }
 

@@ -1,189 +1,158 @@
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    >
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
 
-<RelativeLayout
-    android:layout_width="fill_parent"
-    android:layout_height="match_parent" >
+	<RelativeLayout
+		android:id="@+id/rl_database"
+		android:layout_width="match_parent"
+	    android:layout_height="wrap_content"
+		android:layout_marginLeft="18dp"
+		android:layout_marginTop="14dp"
+		>
+		<TextView
+			android:id="@+id/tv_database"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_alignParentLeft="true"
+			android:layout_alignParentTop="true"
+			android:text="Database"
+			android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
 
-    <ImageView
-        android:id="@+id/imageView1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:layout_marginRight="8dp"
-        android:layout_toRightOf="@+id/write_nfc"
-		android:layout_below="@+id/password_radiobuttons"        
-        android:src="@drawable/radio_tower" />
-    
-    <TextView
-        android:id="@+id/tv_database"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginLeft="18dp"
-        android:layout_marginTop="14dp"
-        android:text="Database"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
-    
-	    <LinearLayout
-	        android:layout_width="fill_parent"
+
+	    <TextView
+		    android:id="@+id/database_name"
+		    android:layout_width="fill_parent"
+		    android:layout_height="wrap_content"
+		    android:layout_below="@+id/tv_database"
+		    android:layout_gravity="bottom"
+		    android:textAppearance="@style/TextAppearance.AppCompat.Body1"/>
+
+
+		<View style="@style/Divider"
+			android:layout_below = "@+id/database_name"
+			/>
+	</RelativeLayout>
+
+	<RelativeLayout
+		android:id="@+id/rl_keyfile"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginLeft="18dp"
+		android:layout_below="@+id/rl_database"
+		>
+
+		<TextView
+	        android:id="@+id/tv_keyfile"
+	        android:layout_width="wrap_content"
 	        android:layout_height="wrap_content"
-			android:layout_below="@+id/tv_database"
-			android:layout_alignLeft="@+id/tv_database"
-	        android:layout_marginLeft="52dp"
-	        android:id="@+id/ll_database"
-	        >
+	        android:text="Keyfile"
+	        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
+		<RelativeLayout
+			android:id="@+id/rl_keyfile_internal"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_below="@+id/tv_keyfile">
+		    <TextView
+			    android:id="@+id/keyfile_name"
+			    android:layout_width="fill_parent"
+			    android:layout_height="wrap_content"
+			    android:layout_gravity="bottom"
+			    android:layout_weight="1"
+			    android:textAppearance="@style/TextAppearance.AppCompat.Body1"/>
+
 			<ImageButton
-		        android:id="@+id/choose_database"
-		        android:layout_width="54dp"
-		        android:layout_height="44dp"
-		        android:scaleType="fitXY"
-		        android:src="@drawable/folder_outline_dark"
-				style="?android:attr/buttonStyleSmall"/>
-			<TextView
-		        android:id="@+id/database_name"
-		        android:layout_width="wrap_content"
-		        android:layout_height="wrap_content"
-		        android:layout_gravity="bottom"
-		        android:layout_weight="1"
-		        android:textAppearance="?android:attr/textAppearanceSmall" />
-		    
-		        
-	    </LinearLayout>
-    
-    <TextView
-        android:id="@+id/tv_keyfile"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/ll_database"
-        android:layout_marginLeft="18dp"
-        android:layout_marginTop="15dp"
-        android:text="Keyfile"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
+				android:id="@+id/b_noKeyfile"
+				android:layout_width="20dp"
+				android:layout_height="20dp"
+				android:layout_alignParentEnd="true"
+				android:adjustViewBounds="false"
+				android:background="@drawable/x_drawable"
+				android:visibility="visible"/>
+		</RelativeLayout>
 
-    <RadioGroup
-        android:id="@+id/keyfile_radiobuttons"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignLeft="@+id/tv_keyfile"
-        android:layout_below="@+id/tv_keyfile">
-        
-	    <RadioButton
-	        android:id="@+id/keyfile_no"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:layout_alignLeft="@+id/tv_keyfile"
-	        android:layout_below="@+id/tv_keyfile"
-	        android:layout_marginLeft="24dp"
-	        android:text="Keyfile not required" />
-	
-	    <RadioButton
-	        android:id="@+id/keyfile_yes"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:layout_alignLeft="@+id/tv_keyfile"
-	        android:layout_below="@+id/keyfile_no"
-	        android:layout_marginLeft="24dp"
-	        android:text="Use a keyfile:" />
-	    
-	    <LinearLayout
-	        android:layout_width="fill_parent"
-	        android:layout_height="wrap_content"
-			android:layout_below="@+id/keyfile_yes"
-			android:layout_alignLeft="@+id/keyfile_yes"
-	        android:layout_marginLeft="52dp"
-	        >
-			<ImageButton
-		        android:id="@+id/choose_keyfile"
-		        android:layout_width="54dp"
-		        android:layout_height="44dp"
-		        android:scaleType="fitXY"
-		        android:src="@drawable/folder_outline_dark"
-				style="?android:attr/buttonStyleSmall"/>
-			<TextView
-		        android:id="@+id/keyfile_name"
-		        android:layout_width="wrap_content"
-		        android:layout_height="wrap_content"
-		        android:layout_gravity="bottom"
-		        android:layout_weight="1"
-		        android:textAppearance="?android:attr/textAppearanceSmall" />
-		    
-		        
-	    </LinearLayout>
-		    	    	    
-	</RadioGroup>
-	
+		<View style="@style/Divider"
+		      android:layout_below = "@+id/rl_keyfile_internal"
+			/>
+	</RelativeLayout>
 
-    <TextView
-        android:id="@+id/tv_password"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/tv_keyfile"
-        android:layout_below="@+id/keyfile_radiobuttons"
-        android:layout_marginTop="15dp"
-        android:text="Password"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
 
-    <RadioGroup
-        android:id="@+id/password_radiobuttons"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignLeft="@+id/tv_password"
-        android:layout_below="@+id/tv_password">
-	    <RadioButton
-	        android:id="@+id/password_no"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:layout_alignLeft="@+id/RadioButton02"
-	        android:layout_below="@+id/tv_password"
-	        android:layout_marginLeft="24dp"
-	        android:text="Password not required" />
-	    
-        <RadioButton
-	        android:id="@+id/password_ask"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:layout_alignLeft="@+id/tv_password"
-	        android:layout_below="@+id/password_no"
-	        android:layout_marginLeft="24dp"       
-	        android:text="Ask each time" />
+	<RelativeLayout
+		android:id="@+id/rl_password"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginLeft="18dp"
+		android:layout_below="@+id/rl_keyfile"
+		>
 
-	
-	    <RadioButton
-	        android:id="@+id/password_yes"
+	    <TextView
+	        android:id="@+id/tv_password"
 	        android:layout_width="wrap_content"
 	        android:layout_height="wrap_content"
-	        android:layout_alignLeft="@+id/tv_keyfile"
-	        android:layout_below="@+id/password_ask"
-	        android:layout_marginLeft="24dp"       
-	        android:text="Use a password:" />
-	
+	        android:text="Password"
+	        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
+
 	    <EditText
 	        android:id="@+id/password"
-	        android:layout_width="wrap_content"
+	        android:layout_width="match_parent"
 	        android:layout_height="wrap_content"
-	        android:layout_alignLeft="@+id/password_yes"
-	        android:layout_below="@+id/password_yes"
-	        android:layout_marginLeft="54dp"       
+	        android:layout_below="@+id/tv_password"
 	        android:inputType="textPassword"
-	        android:ems="10" >
+	         >
 	    </EditText>
-    </RadioGroup>
-    
-    <Button
-        android:id="@+id/write_nfc"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
-		android:layout_below="@+id/password_radiobuttons"
-        
-        android:text="Write NFC" />
+
+		<View style="@style/Divider"
+		      android:layout_below = "@+id/password"
+			/>
+	</RelativeLayout>
+
+	<RelativeLayout
+		android:id="@+id/rl_app_choice"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginLeft="18dp"
+		android:layout_below="@+id/rl_password"
+		>
+
+		<TextView
+			android:id="@+id/tv_appchoice"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="App"
+			android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
+		<Spinner
+			android:id="@+id/s_keepass_app"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_below="@+id/tv_appchoice"
+			android:layout_marginTop="7dp"/>
+
+		<View style="@style/Divider"
+		      android:layout_below = "@+id/s_keepass_app"
+			/>
+	</RelativeLayout>
+
+	<Button
+		android:id="@+id/write_nfc"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_below="@+id/rl_app_choice"
+		android:layout_centerHorizontal="true"
+		android:layout_marginTop="16dp"
+
+		android:text="Write NFC"
+		android:textAppearance="@style/TextAppearance.AppCompat.Widget.Button"/>
+
+	<ImageView
+		android:id="@+id/imageView1"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_alignParentBottom="true"
+		android:layout_alignParentEnd="true"
+		android:src="@drawable/radio_tower" />
+
+
 
 </RelativeLayout>
-</ScrollView>
