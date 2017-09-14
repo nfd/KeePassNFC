@@ -36,6 +36,7 @@ import android.nfc.Tag;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 
 import net.lardcave.keepassnfc.nfccomms.KPApplet;
 import net.lardcave.keepassnfc.nfccomms.KPNdef;
@@ -70,6 +71,7 @@ public class WriteNFCActivity extends Activity {
                 finish();
             }
         });
+
     }
 
     @Override
@@ -89,6 +91,8 @@ public class WriteNFCActivity extends Activity {
     @Override
     public void onNewIntent(Intent intent)
     {
+	    boolean writeNdefToSmartcard = ((CheckBox)findViewById(R.id.cbWriteNDEF)).isChecked();
+
         String action = intent.getAction();
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
 				|| NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)) {
@@ -98,7 +102,7 @@ public class WriteNFCActivity extends Activity {
 			boolean appletWritten = false;
 			try {
 				KPApplet applet = new KPApplet();
-				appletWritten = applet.write(intent, randomBytes);
+				appletWritten = applet.write(intent, randomBytes, writeNdefToSmartcard);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

@@ -103,7 +103,7 @@ public class KPApplet {
 		}
 	}
 
-	public boolean write(Intent intent, byte[] secret) throws IOException {
+	public boolean write(Intent intent, byte[] secret, boolean writeNdef) throws IOException {
 		IsoDep channel = connect(intent);
 		if(channel == null) {
 			return false;
@@ -111,8 +111,10 @@ public class KPApplet {
 
 			setPasswordKey(channel, secret);
 
-			// Attempt to write NDEF as well.
-			writeNdef(channel, KPNdef.createWakeOnlyNdefMessage());
+			if(writeNdef) {
+				// Attempt to write NDEF as well.
+				doWriteNdef(channel, KPNdef.createWakeOnlyNdefMessage());
+			}
 
 			channel.close();
 
@@ -120,7 +122,7 @@ public class KPApplet {
 		}
 	}
 
-	private boolean writeNdef(IsoDep channel, NdefMessage ndefMessage) throws IOException {
+	private boolean doWriteNdef(IsoDep channel, NdefMessage ndefMessage) throws IOException {
 		byte[] result;
 
 		byte[] ndefData = ndefMessage.toByteArray();

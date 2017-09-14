@@ -35,4 +35,25 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true" />
 
+    <CheckBox
+        android:id="@+id/cbWriteNDEF"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/textView"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="51dp"
+        android:checked="false"
+        android:text="Smartcard: overwrite NDEF"/>
+
+    <TextView
+        android:id="@+id/textView7"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/cbWriteNDEF"
+        android:layout_marginLeft="32dp"
+        android:layout_marginRight="32dp"
+        android:text="If using a smartcard, write an NDEF record for auto-start. This is ignored if using a tag."
+        android:textAppearance="@style/TextAppearance.AppCompat.Caption"/>
+
 </RelativeLayout>
