@@ -11,7 +11,7 @@ public class KeePassApps {
 	private static KeePassDroid keePassDroid = new KeePassDroid();
 
 	private KeePassApps() {
-		apps = new ArrayList<KeePassApp>();
+		apps = new ArrayList<>();
 		apps.add(keePassDroid);
 		apps.add(new Keepass2Android());
 	}

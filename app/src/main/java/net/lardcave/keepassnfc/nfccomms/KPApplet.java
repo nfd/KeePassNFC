@@ -1,6 +1,7 @@
 package net.lardcave.keepassnfc.nfccomms;
 
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
@@ -74,6 +75,11 @@ public class KPApplet {
 	};
 
 	private SecureRandom rng = new SecureRandom();
+
+	public static IntentFilter getIntentFilter() {
+		IntentFilter filter = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
+		return filter;
+	}
 
 	private IsoDep connect(Intent intent) throws IOException {
 		Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);

@@ -19,7 +19,7 @@
 		android:label="@string/app_name"
 		android:supportsRtl="true"
 		android:theme="@style/AppTheme">
-		<activity android:name=".PrepareNewTagActivity">
+		<activity android:name=".MainActivity">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN"/>
 
@@ -47,6 +47,11 @@
 		<activity
 			android:name=".NoKeepassActivity"
 			android:label="@string/title_activity_no_keepass"
+			android:theme="@style/AppTheme.NoActionBar">
+		</activity>
+		<activity
+			android:name=".PrepareNewTagActivity"
+			android:label="KeePassNFC"
 			android:theme="@style/AppTheme.NoActionBar">
 		</activity>
 	</application>

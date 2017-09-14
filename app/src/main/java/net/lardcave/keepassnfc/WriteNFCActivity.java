@@ -30,7 +30,6 @@ package net.lardcave.keepassnfc;
 import java.io.IOException;
 
 import android.app.Activity;
-import android.app.PendingIntent;
 import android.content.Intent;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
@@ -67,41 +66,24 @@ public class WriteNFCActivity extends Activity {
         b.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View self) {
-                nfc_disable();
+                NfcReadActions.nfc_disable(WriteNFCActivity.this);
                 finish();
             }
         });
-    }
-
-    private void nfc_enable()
-    {
-        // Register for any NFC event (only while we're in the foreground)
-
-        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
-        PendingIntent pending_intent = PendingIntent.getActivity(this, 0, new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
-
-        adapter.enableForegroundDispatch(this, pending_intent, null, null);
-    }
-
-    private void nfc_disable()
-    {
-        NfcAdapter adapter = NfcAdapter.getDefaultAdapter(this);
-
-        adapter.disableForegroundDispatch(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
-        nfc_enable();
+        NfcReadActions.nfc_enable(this);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
 
-        nfc_disable();
+        NfcReadActions.nfc_disable(this);
     }
 
     @Override
@@ -140,4 +122,5 @@ public class WriteNFCActivity extends Activity {
 			System.out.println("Tag only...");
 		}
     }
+
 }

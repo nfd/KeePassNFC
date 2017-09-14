@@ -1,6 +1,7 @@
 package net.lardcave.keepassnfc.nfccomms;
 
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
@@ -34,6 +35,18 @@ public class KPNdef {
 		// TODO this is unused because the applet code bypasses Android's NDEF support (since it
 		// TODO already has an isodep channel open). harmonise this & applet NDEF code.
 		this.secretKey = null;
+	}
+
+	public static IntentFilter getIntentFilter() {
+		IntentFilter ndef = new IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED);
+		try {
+			ndef.addDataType(nfc_ndef_mime_type);
+		}
+		catch (IntentFilter.MalformedMimeTypeException e) {
+			throw new RuntimeException("fail", e);
+		}
+
+		return ndef;
 	}
 
 	/** Read an NDEF message from an Intent */

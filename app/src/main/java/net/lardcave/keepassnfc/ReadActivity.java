@@ -56,63 +56,19 @@ public class ReadActivity extends Activity {
 	{
 		super.onCreate(savedInstanceState);
 
-		KPNdef ndef = null;
-		Intent intent = getIntent();
-		if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
-			ndef = new KPNdef(getIntent());
+		DatabaseInfo dbinfo = null;
+
+		try {
+			dbinfo = NfcReadActions.getDbInfoFromIntent(this, getIntent());
+		} catch (NfcReadActions.Error error) {
+			Toast.makeText(this, error.getMessage(), Toast.LENGTH_SHORT).show();
 		}
 
-		if (ndef != null && ndef.readWasSuccessful()) {
-			DatabaseInfo dbinfo = DatabaseInfo.deserialise(this);
-
-			if(dbinfo == null) {
-				Toast.makeText(this, "No KPNFC database set up.", Toast.LENGTH_SHORT).show();
-				return;
-			}
-
-			byte[] secretKey = ndef.getSecretKey();
-
-			if(secretKey != null)  {
-				/* NDEF message contained the decryption key -- don't use applet. */
-				try {
-					dbinfo.decrypt_password(secretKey);
-				} catch (CryptoFailedException e) {
-					Toast.makeText(this, "Couldn't decrypt data. Re-do key?", Toast.LENGTH_SHORT).show();
-					dbinfo = null;
-				}
-			} else {
-				/* NDEF message contains no secrets -- decrypt using applet stored on card. */
-				KPApplet applet = new KPApplet();
-				byte[] decrypted_bytes = null;
-				try {
-					decrypted_bytes = applet.decrypt(intent, dbinfo.encrypted_password);
-				} catch (IOException e) {
-					Toast.makeText(this, "Card communication failed.", Toast.LENGTH_SHORT).show();
-					dbinfo = null;
-				}
-
-				if(decrypted_bytes != null) {
-					dbinfo.set_decrypted_password(decrypted_bytes);
-				}
-			}
-
-			if(dbinfo != null) {
-				startKeepassActivity(dbinfo);
-			}
-
-			finish();
+		if(dbinfo != null) {
+			NfcReadActions.startKeepassActivity(this, dbinfo);
 		}
-	}
 
-	private boolean startKeepassActivity(DatabaseInfo dbinfo)
-	{
-		KeePassApp app = KeePassApps.get().forId(dbinfo.getKeepassAppId());
-
-		Intent intent = app.getIntent(this, dbinfo);
-
-		startActivity(intent);
-
-		return true;
+		finish();
 	}
 
 }

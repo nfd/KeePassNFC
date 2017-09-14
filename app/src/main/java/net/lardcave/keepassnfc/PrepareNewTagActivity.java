@@ -221,6 +221,7 @@ public class PrepareNewTagActivity extends Activity {
                 if (random_bytes != null && encrypt_and_store(random_bytes)) {
                     // Job well done! Let's have some toast.
                     Toast.makeText(getApplicationContext(), "Tag written successfully!", Toast.LENGTH_SHORT).show();
+	                switchToMainActivity();
                 } else {
                     Toast.makeText(getApplicationContext(), "Error writing to application database!", Toast.LENGTH_SHORT).show();
                 }
@@ -277,6 +278,12 @@ public class PrepareNewTagActivity extends Activity {
 		Intent intent = new Intent(getApplicationContext(), WriteNFCActivity.class);
 		intent.putExtra("randomBytes", randomBytes);
 		startActivityForResult(intent, REQUEST_NFC_WRITE);
+	}
+
+	protected void switchToMainActivity() {
+		Intent intent = new Intent(this, MainActivity.class);
+		startActivity(intent);
+		finish();
 	}
 
 }
